@@ -1,36 +1,65 @@
 class UserController {
-  constructor(formId, tableId) {
-    this.formEl = document.getElementById(formId);
+  constructor(formIdCreate, formIdUpdate, tableId) {
+    this.formEl = document.getElementById(formIdCreate);
+    this.formUpdateEl = document.getElementById(formIdUpdate);
     this.tableEl = document.getElementById(tableId);
 
     this.onSubmit();
-    this.onEditCancel();
-  }
-  onEditCancel() {
+    this.onEdit();
+  } //fechando constructor
+  onEdit() {
     document
       .querySelector("#box-user-update .btn-cancel")
       .addEventListener("click", e => {
         this.showPanelCreate();
       });
-  }
-  onSubmit() {
-    document.addEventListener("submit", event => {
+    this.formUpdateEl.addEventListener("submit", event => {
       event.preventDefault();
 
-      let btn = this.formEl.querySelector("[type=submit]");
+      let btn = this.formUpdateEl.querySelector("[type=submit]");
+
       btn.disabled = true;
 
-      let values = this.getValues();
+      let values = this.getValues(this.formUpdateEl);
 
-      if (!values) return false, (btn.disabled = false);
+      let index = this.formUpdateEl.dataset.trIndex;
 
-      this.getPhoto().then(
+      let tr = this.tableEl.rows[index];
+
+      let userOld = JSON.parse(tr.dataset.user);
+
+      let result = Object.assign({}, userOld, values);
+
+      this.getPhoto(this.formUpdateEl).then(
         content => {
-          values.photo = content;
+          if (!values.photo) {
+            result._photo = userOld.photo;
+          } else {
+            result._photo = content;
+          }
 
-          this.addLine(values);
+          tr.dataset.user = JSON.stringify(result);
 
-          this.formEl.reset();
+          tr.innerHTML = `         
+          <td>
+          <img src="${
+            result._photo
+          }" alt="User Image" class="img-circle img-sm"></td>
+              <td>${result._name}</td>
+              <td>${result._email}</td>
+              <td>${result._admin ? "Sim" : "Não"}</td>
+              <td>${result._date}</td>
+              <td>
+                  <button type="button" class="btn btn-primary btn-edit btn-xs btn-flat">Editar</button>
+                  <button type="button" class="btn btn-danger  btn-delete btn-xs btn-flat">Excluir</button>
+          </td>
+          `;
+
+          this.addEventsTr(tr);
+
+          this.updateCount();
+
+          this.formUpdateEl.reset();
 
           btn.disabled = false;
         },
@@ -39,13 +68,43 @@ class UserController {
         }
       );
     });
-  }
+  } //fechando onEdit
 
-  getPhoto(callback) {
+  onSubmit() {
+    this.formEl.addEventListener("submit", event => {
+      event.preventDefault();
+
+      let btn = this.formEl.querySelector("[type=submit]");
+      btn.disabled = true;
+
+      let values = this.getValues(this.formEl);
+
+      if (!values) return false, (btn.disabled = false);
+
+      this.getPhoto(this.formEl).then(
+        content => {
+          values.photo = content;
+
+          this.addLine(values);
+
+          this.formEl.reset();
+
+          btn.disabled = false;
+
+          this.showPanelCreate();
+        },
+        e => {
+          console.error(e);
+        }
+      );
+    });
+  } //fechando OnSubmit
+
+  getPhoto(formEl) {
     return new Promise((resolve, reject) => {
       let fileReader = new FileReader();
 
-      let elements = [...this.formEl.elements].filter(item => {
+      let elements = [...formEl.elements].filter(item => {
         if (item.name === "photo") {
           return item;
         }
@@ -67,14 +126,14 @@ class UserController {
         resolve("dist/img/no-avatar.jpg");
       }
     });
-  }
+  } //fechando getPhoto
 
-  getValues() {
+  getValues(formEl) {
     let user = {};
 
     let isValid = true;
 
-    [...this.formEl.elements].forEach((field, index) => {
+    [...formEl.elements].forEach((field, index) => {
       if (
         ["name", "email", "password"].indexOf(field.name) > -1 &&
         !field.value
@@ -131,24 +190,58 @@ class UserController {
         </td>
         `;
 
-    tr.querySelector(".btn-edit").addEventListener("click", e => {
-      console.log(JSON.parse(tr.dataset.user));
-      this.showPanelUpdate();
-    });
+    this.addEventsTr(tr);
 
     this.tableEl.appendChild(tr);
     this.updateCount();
   } //fechando addLine
 
+  addEventsTr(tr) {
+    tr.querySelector(".btn-edit").addEventListener("click", e => {
+      let json = JSON.parse(tr.dataset.user);
+
+      this.formUpdateEl.dataset.trIndex = tr.sectionRowIndex;
+
+      for (let name in json) {
+        let field = this.formUpdateEl.querySelector(
+          "[name=" + name.replace("_", "") + "]"
+        );
+
+        if (field) {
+          switch (field.type) {
+            case "file":
+              continue;
+              break;
+            case "radio":
+              field = this.formUpdateEl.querySelector(
+                "[name=" + name.replace("_", "") + "][value=" + json[name] + "]"
+              );
+              field.checked = true;
+              break;
+            case "checkbox":
+              field.checked = json[name];
+              break;
+
+            default:
+              field.value = json[name];
+          }
+        }
+      }
+      this.formUpdateEl.querySelector(".photo").src = json.photo;
+
+      this.showPanelUpdate();
+    });
+  } //fechando addEventsTr
+
   showPanelCreate() {
     document.querySelector("#box-user-create").style.display = "block";
     document.querySelector("#box-user-update").style.display = "none";
-  }
+  } //fechando showPanelCreate
 
   showPanelUpdate() {
     document.querySelector("#box-user-create").style.display = "none";
     document.querySelector("#box-user-update").style.display = "block";
-  }
+  } //fechando showPanelUpdate
   updateCount() {
     let numUser = 0;
     let numAdmin = 0;
