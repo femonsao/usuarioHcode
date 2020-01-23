@@ -13,7 +13,8 @@ class UserController {
       .addEventListener("click", e => {
         this.showPanelCreate();
       });
-    this.formUpdateEl.addEventListener("submit", event => {
+
+    this.formUpdateEl.addEventListener("submit", e => {
       event.preventDefault();
 
       let btn = this.formUpdateEl.querySelector("[type=submit]");
@@ -21,6 +22,7 @@ class UserController {
       btn.disabled = true;
 
       let values = this.getValues(this.formUpdateEl);
+      console.log(values, "values");
 
       let index = this.formUpdateEl.dataset.trIndex;
 
@@ -29,44 +31,36 @@ class UserController {
       let userOld = JSON.parse(tr.dataset.user);
 
       let result = Object.assign({}, userOld, values);
+      console.log(values._photo, "under");
+      console.log(values.photo, "sem");
+      if (!values.photo) result._photo = userOld.photo;
 
-      this.getPhoto(this.formUpdateEl).then(
-        content => {
-          if (!values.photo) {
-            result._photo = userOld.photo;
-          } else {
-            result._photo = content;
-          }
+      tr.dataset.user = JSON.stringify(result);
 
-          tr.dataset.user = JSON.stringify(result);
-
-          tr.innerHTML = `         
+      tr.innerHTML = `         
           <td>
-          <img src="${
-            result._photo
-          }" alt="User Image" class="img-circle img-sm"></td>
-              <td>${result._name}</td>
-              <td>${result._email}</td>
-              <td>${result._admin ? "Sim" : "Não"}</td>
-              <td>${result._date}</td>
-              <td>
-                  <button type="button" class="btn btn-primary btn-edit btn-xs btn-flat">Editar</button>
-                  <button type="button" class="btn btn-danger  btn-delete btn-xs btn-flat">Excluir</button>
+            <img src="${
+              result._photo
+            }" alt="User Image" class="img-circle img-sm"></td>
+                <td>${result._name}</td>
+                <td>${result._email}</td>
+                <td>${result._admin ? "Sim" : "Não"}</td>
+                <td>${result._date}</td>
+                <td>
+                    <button type="button" class="btn btn-primary btn-edit btn-xs btn-flat">Editar</button>
+                    <button type="button" class="btn btn-danger  btn-delete btn-xs btn-flat">Excluir</button>
           </td>
-          `;
+      `;
 
-          this.addEventsTr(tr);
+      this.addEventsTr(tr);
 
-          this.updateCount();
+      this.updateCount();
 
-          this.formUpdateEl.reset();
+      btn.disabled = false;
 
-          btn.disabled = false;
-        },
-        e => {
-          console.error(e);
-        }
-      );
+      this.formUpdateEl.reset();
+
+      this.showPanelCreate();
     });
   } //fechando onEdit
 
@@ -90,8 +84,6 @@ class UserController {
           this.formEl.reset();
 
           btn.disabled = false;
-
-          this.showPanelCreate();
         },
         e => {
           console.error(e);
@@ -228,6 +220,7 @@ class UserController {
         }
       }
       this.formUpdateEl.querySelector(".photo").src = json.photo;
+      console.log(this.formUpdateEl.querySelector(".photo").src);
 
       this.showPanelUpdate();
     });
@@ -249,7 +242,6 @@ class UserController {
       numUser++;
 
       let user = JSON.parse(tr.dataset.user);
-      console.log(user);
 
       if (user._admin) numAdmin++;
     });
